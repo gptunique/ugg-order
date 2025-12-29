@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🥾 UGG 주문서</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #FAF7F2 0%, #F5EFE6 100%);
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 20px;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; }
+    }
+    .size-btn {
+      transition: all 0.15s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    .size-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .size-btn.selected {
+      background: #1a1a1a !important;
+      color: white !important;
+      border-color: #1a1a1a !important;
+    }
+    .product-card {
+      transition: all 0.2s ease;
+      max-width: 440px;
+    }
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #2C2C2C 0%, #1a1a1a 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .btn-secondary {
+      background: white;
+      color: #333;
+      border: 2px solid #ddd;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-secondary:hover {
+      border-color: #999;
+    }
+    .input-field {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border-color 0.2s;
+      background: white;
+      font-family: inherit;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: #666;
+    }
+    .qty-input {
+      width: 50px;
+      text-align: center;
+      padding: 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .image-upload-zone {
+      border: 2px dashed #ccc;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: rgba(255,255,255,0.5);
+      margin-bottom: 12px;
+      min-height: 100px;
+    }
+    .image-upload-zone:hover {
+      border-color: #888;
+      background: rgba(255,255,255,0.8);
+    }
+    .image-upload-zone.has-image {
+      border-style: solid;
+      padding: 0;
+      overflow: hidden;
+      min-height: auto;
+      max-width: 100%;
+      height: auto;
+      max-height: 280px;
+      background: #f9f9f9;
+    }
+    .product-image {
+      width: 100%;
+      max-height: 280px;
+      object-fit: contain;
+      cursor: pointer;
+      transition: transform 0.2s;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+    .product-image:hover {
+      transform: scale(1.02);
+    }
+    .remove-image-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      border: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .remove-image-btn:hover {
+      background: rgba(220,53,69,0.9);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // US 사이즈 → 한국 사이즈 매핑
+    const US_TO_KR = {
+      5: 220, 6: 230, 7: 240, 8: 250, 9: 260, 10: 270, 11: 280, 12: 290
+    };
+
+    const UGG_PRODUCTS = [
+      { sku: '1122550-CHE', name: 'Classic Ultra Mini', color: 'Chestnut', category: 'Classic', sizes: [5,6,7,8,9,10] },
+      { sku: '1016422-CHE', name: 'Classic Short II', color: 'Chestnut', category: 'Classic', sizes: [5,6,7,8,9,10,11] },
+      { sku: '1016501-GREY', name: 'Classic Mini II', color: 'Grey', category: 'Classic', sizes: [5,6,7,8,9,10] },
+      { sku: '1135092-CHE', name: 'Tazz', color: 'Chestnut', category: 'Platform', sizes: [5,6,7,8,9,10] },
+      { sku: '1122553-CHE', name: 'Classic Ultra Mini Platform', color: 'Chestnut', category: 'Platform', sizes: [5,6,7,8,9,10] },
+      { sku: '1119002-CHE', name: 'Neumel', color: 'Chestnut', category: 'Neumel', sizes: [7,8,9,10,11,12] },
+      { sku: '1016223-CHE', name: 'Dakota', color: 'Chestnut', category: 'Slipper', sizes: [5,6,7,8,9,10] },
+      { sku: '1016223-BLK', name: 'Dakota', color: 'Black', category: 'Slipper', sizes: [5,6,7,8,9,10] },
+    ];
+
+    const CATEGORY_COLORS = {
+      'Classic': { bg: '#FDF6E9', border: '#D4A574', badge: '#8B5A2B' },
+      'Platform': { bg: '#F0E6F5', border: '#9B6FA8', badge: '#6B4C78' },
+      'Neumel': { bg: '#E8F4EC', border: '#6BA583', badge: '#3D6B52' },
+      'Slipper': { bg: '#E6F0F5', border: '#6A9BB5', badge: '#3D6B85' },
+    };
+
+    // XLSX 다운로드 함수
+    const downloadXLSX = (orders, clientName, clientContact, orderDate, notes, senderAddress, receiverAddress) => {
+      const orderSummary = {};
+      Object.values(orders).forEach(item => {
+        if (!orderSummary[item.sku]) orderSummary[item.sku] = [];
+        orderSummary[item.sku].push({ size: item.size, qty: item.qty });
+      });
+
+      const totalItems = Object.values(orders).reduce((sum, item) => sum + item.qty, 0);
+      const wb = XLSX.utils.book_new();
+      const data = [];
+      
+      data.push(['🥾 UGG 주문서']);
+      data.push([]);
+      data.push(['📋 거래처 정보']);
+      data.push(['거래처명', clientName || '-']);
+      data.push(['연락처', clientContact || '-']);
+      data.push(['주문일', orderDate]);
+      data.push(['비고', notes || '-']);
+      data.push([]);
+      data.push(['🚚 배송 정보']);
+      data.push(['발송지 주소', senderAddress || '-']);
+      data.push(['도착지 주소', receiverAddress || '-']);
+      data.push([]);
+      data.push([]);
+      
+      data.push(['📦 주문 상세']);
+      data.push(['No.', '품번 (SKU)', '제품명', '카테고리', '컬러', '사이즈(mm)', '수량']);
+      
+      let rowNum = 1;
+      Object.entries(orderSummary).forEach(([sku, items]) => {
+        const product = UGG_PRODUCTS.find(p => p.sku === sku);
+        items.forEach(item => {
+          data.push([
+            rowNum++,
+            sku,
+            product?.name || '',
+            product?.category || '',
+            product?.color || '',
+            US_TO_KR[item.size],
+            item.qty
+          ]);
+        });
+      });
+      
+      data.push([]);
+      data.push(['', '', '', '', '', '총 주문 수량', totalItems]);
+      data.push([]);
+      data.push([]);
+      
+      data.push(['📊 제품별 요약']);
+      data.push(['품번 (SKU)', '제품명', '컬러', '사이즈 × 수량', '소계']);
+      
+      Object.entries(orderSummary).forEach(([sku, items]) => {
+        const product = UGG_PRODUCTS.find(p => p.sku === sku);
+        const sizeQtyStr = items.map(i => `${US_TO_KR[i.size]}(${i.qty})`).join(', ');
+        const subtotal = items.reduce((sum, i) => sum + i.qty, 0);
+        data.push([
+          sku,
+          product?.name || '',
+          product?.color || '',
+          sizeQtyStr,
+          subtotal
+        ]);
+      });
+      
+      data.push([]);
+      data.push(['', '', '', '합계', totalItems]);
+
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      ws['!cols'] = [
+        { wch: 6 }, { wch: 18 }, { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 10 },
+      ];
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
+        { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } },
+        { s: { r: 13, c: 0 }, e: { r: 13, c: 6 } },
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, '주문서');
+      const fileName = `UGG_주문서_${clientName || '거래처'}_${orderDate}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    };
+
+    function UGGOrderForm() {
+      const [orders, setOrders] = useState({});
+      const [images, setImages] = useState({});
+      const [clientName, setClientName] = useState('');
+      const [clientContact, setClientContact] = useState('');
+      const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
+      const [notes, setNotes] = useState('');
+      const [senderAddress, setSenderAddress] = useState('');
+      const [receiverAddress, setReceiverAddress] = useState('');
+      const [showShareModal, setShowShareModal] = useState(false);
+      const [shareUrl, setShareUrl] = useState('');
+      const [copied, setCopied] = useState(false);
+      const [imageViewModal, setImageViewModal] = useState(null);
+      const fileInputRefs = useRef({});
+      
+      const [orderHistory, setOrderHistory] = useState([]);
+      const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+      // localStorage 히스토리 로드
+      const loadHistory = () => {
+        try {
+          const stored = localStorage.getItem('ugg-order-history');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            parsed.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+            setOrderHistory(parsed);
+          }
+        } catch (e) {
+          console.error('Failed to load history:', e);
+          setOrderHistory([]);
+        }
+      };
+
+      // 주문 저장
+      const saveToHistory = () => {
+        if (getTotalItems() === 0) {
+          alert('주문 내역이 없습니다.');
+          return;
+        }
+        
+        const orderData = {
+          id: Date.now(),
+          orders,
+          images,
+          clientName,
+          clientContact,
+          orderDate,
+          notes,
+          senderAddress,
+          receiverAddress,
+          totalItems: getTotalItems(),
+          savedAt: new Date().toISOString(),
+        };
+        
+        try {
+          const stored = localStorage.getItem('ugg-order-history');
+          const history = stored ? JSON.parse(stored) : [];
+          history.unshift(orderData);
+          // 최대 50개 유지
+          if (history.length > 50) history.pop();
+          localStorage.setItem('ugg-order-history', JSON.stringify(history));
+          alert('주문이 저장되었습니다.');
+          loadHistory();
+        } catch (e) {
+          console.error('Failed to save order:', e);
+          alert('저장에 실패했습니다.');
+        }
+      };
+
+      // 히스토리에서 불러오기
+      const loadFromHistory = (historyItem) => {
+        setOrders(historyItem.orders || {});
+        setImages(historyItem.images || {});
+        setClientName(historyItem.clientName || '');
+        setClientContact(historyItem.clientContact || '');
+        setOrderDate(historyItem.orderDate || new Date().toISOString().split('T')[0]);
+        setNotes(historyItem.notes || '');
+        setSenderAddress(historyItem.senderAddress || '');
+        setReceiverAddress(historyItem.receiverAddress || '');
+        setShowHistoryModal(false);
+      };
+
+      // 히스토리 삭제
+      const deleteFromHistory = (id, e) => {
+        e.stopPropagation();
+        if (confirm('이 주문 기록을 삭제하시겠습니까?')) {
+          try {
+            const stored = localStorage.getItem('ugg-order-history');
+            const history = stored ? JSON.parse(stored) : [];
+            const filtered = history.filter(item => item.id !== id);
+            localStorage.setItem('ugg-order-history', JSON.stringify(filtered));
+            loadHistory();
+          } catch (e) {
+            console.error('Failed to delete:', e);
+          }
+        }
+      };
+
+      // URL에서 데이터 로드
+      useEffect(() => {
+        loadHistory();
+        
+        const params = new URLSearchParams(window.location.search);
+        const data = params.get('data');
+        if (data) {
+          try {
+            const decoded = JSON.parse(decodeURIComponent(escape(atob(data))));
+            if (decoded.orders) setOrders(decoded.orders);
+            if (decoded.images) setImages(decoded.images);
+            if (decoded.clientName) setClientName(decoded.clientName);
+            if (decoded.clientContact) setClientContact(decoded.clientContact);
+            if (decoded.orderDate) setOrderDate(decoded.orderDate);
+            if (decoded.notes) setNotes(decoded.notes);
+            if (decoded.senderAddress) setSenderAddress(decoded.senderAddress);
+            if (decoded.receiverAddress) setReceiverAddress(decoded.receiverAddress);
+          } catch (e) {
+            console.error('Failed to parse URL data');
+          }
+        }
+      }, []);
+
+      const handleImageUpload = (sku, event) => {
+        const file = event.target.files[0];
+        if (file) {
+          if (file.size > 2 * 1024 * 1024) {
+            alert('이미지 크기는 2MB 이하로 업로드해주세요.');
+            return;
+          }
+          
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const targetWidth = 400;
+              const targetHeight = 267;
+              
+              let width = img.width;
+              let height = img.height;
+              
+              const ratio = Math.min(targetWidth / width, targetHeight / height);
+              const newWidth = Math.round(width * ratio);
+              const newHeight = Math.round(height * ratio);
+              
+              canvas.width = newWidth;
+              canvas.height = newHeight;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, newWidth, newHeight);
+              
+              const resizedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+              setImages(prev => ({ ...prev, [sku]: resizedBase64 }));
+            };
+            img.src = reader.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+
+      const removeImage = (sku, e) => {
+        e.stopPropagation();
+        setImages(prev => {
+          const newImages = { ...prev };
+          delete newImages[sku];
+          return newImages;
+        });
+      };
+
+      const toggleSize = (sku, size) => {
+        setOrders(prev => {
+          const key = `${sku}-${size}`;
+          const newOrders = { ...prev };
+          if (newOrders[key]) {
+            delete newOrders[key];
+          } else {
+            newOrders[key] = { sku, size, qty: 1 };
+          }
+          return newOrders;
+        });
+      };
+
+      const updateQty = (sku, size, qty) => {
+        const key = `${sku}-${size}`;
+        if (qty <= 0) {
+          setOrders(prev => {
+            const newOrders = { ...prev };
+            delete newOrders[key];
+            return newOrders;
+          });
+        } else {
+          setOrders(prev => ({
+            ...prev,
+            [key]: { sku, size, qty: parseInt(qty) || 1 }
+          }));
+        }
+      };
+
+      const isSelected = (sku, size) => !!orders[`${sku}-${size}`];
+      const getQty = (sku, size) => orders[`${sku}-${size}`]?.qty || 1;
+
+      const generateShareUrl = () => {
+        const data = { orders, images, clientName, clientContact, orderDate, notes, senderAddress, receiverAddress };
+        const jsonStr = JSON.stringify(data);
+        
+        if (jsonStr.length > 50000) {
+          alert('이미지가 너무 많거나 큽니다. 일부 이미지를 삭제하거나 더 작은 이미지를 사용해주세요.');
+          return;
+        }
+        
+        const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+        const url = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
+        setShareUrl(url);
+        setShowShareModal(true);
+      };
+
+      const copyToClipboard = () => {
+        navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      };
+
+      const getTotalItems = () => {
+        return Object.values(orders).reduce((sum, item) => sum + item.qty, 0);
+      };
+
+      const getOrderSummary = () => {
+        const summary = {};
+        Object.values(orders).forEach(item => {
+          if (!summary[item.sku]) summary[item.sku] = [];
+          summary[item.sku].push({ size: item.size, qty: item.qty });
+        });
+        return summary;
+      };
+
+      const clearAll = () => {
+        setOrders({});
+        setImages({});
+        setClientName('');
+        setClientContact('');
+        setNotes('');
+        setSenderAddress('');
+        setReceiverAddress('');
+      };
+
+      const printOrder = () => {
+        window.print();
+      };
+
+      const groupedProducts = UGG_PRODUCTS.reduce((acc, product) => {
+        if (!acc[product.category]) acc[product.category] = [];
+        acc[product.category].push(product);
+        return acc;
+      }, {});
+
+      return (
+        <div>
+          {/* 헤더 */}
+          <div style={{
+            maxWidth: '1200px',
+            margin: '0 auto 24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px',
+          }}>
+            <div>
+              <h1 style={{
+                fontSize: '28px',
+                fontWeight: '800',
+                color: '#1a1a1a',
+                margin: 0,
+                letterSpacing: '-0.5px',
+              }}>
+                🥾 UGG 주문서
+              </h1>
+              <p style={{ color: '#666', margin: '4px 0 0', fontSize: '14px' }}>
+                제품을 클릭하여 주문 수량을 선택하세요 · 📷 이미지 첨부 가능
+              </p>
+            </div>
+            
+            <div className="no-print" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button className="btn-secondary" onClick={clearAll}>
+                🗑️ 초기화
+              </button>
+              <button className="btn-secondary" onClick={() => { loadHistory(); setShowHistoryModal(true); }}>
+                📋 히스토리 ({orderHistory.length})
+              </button>
+              <button 
+                className="btn-secondary" 
+                onClick={saveToHistory}
+                disabled={getTotalItems() === 0}
+                style={{ opacity: getTotalItems() === 0 ? 0.5 : 1 }}
+              >
+                💾 저장
+              </button>
+              <button className="btn-secondary" onClick={printOrder}>
+                🖨️ 인쇄
+              </button>
+              <button 
+                className="btn-secondary" 
+                onClick={() => downloadXLSX(orders, clientName, clientContact, orderDate, notes, senderAddress, receiverAddress)}
+                disabled={getTotalItems() === 0}
+                style={{ opacity: getTotalItems() === 0 ? 0.5 : 1 }}
+              >
+                📥 엑셀
+              </button>
+              <button className="btn-primary" onClick={generateShareUrl}>
+                🔗 URL 공유
+              </button>
+            </div>
+          </div>
+
+          {/* 거래처 정보 */}
+          <div style={{
+            maxWidth: '1200px',
+            margin: '0 auto 24px',
+            background: 'white',
+            borderRadius: '16px',
+            padding: '24px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          }}>
+            <h2 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: '#333' }}>
+              📋 거래처 정보
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                  거래처명
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="거래처명 입력"
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                  연락처
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={clientContact}
+                  onChange={(e) => setClientContact(e.target.value)}
+                  placeholder="연락처 입력"
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                  주문일
+                </label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={orderDate}
+                  onChange={(e) => setOrderDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                  비고
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="메모 입력"
+                />
+              </div>
+            </div>
+            
+            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: '#333' }}>
+                🚚 배송 정보
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                    📤 발송지 주소
+                  </label>
+                  <textarea
+                    className="input-field"
+                    value={senderAddress}
+                    onChange={(e) => setSenderAddress(e.target.value)}
+                    placeholder="발송지 주소 입력"
+                    rows={2}
+                    style={{ resize: 'vertical', minHeight: '60px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                    📥 도착지 주소
+                  </label>
+                  <textarea
+                    className="input-field"
+                    value={receiverAddress}
+                    onChange={(e) => setReceiverAddress(e.target.value)}
+                    placeholder="도착지 주소 입력"
+                    rows={2}
+                    style={{ resize: 'vertical', minHeight: '60px' }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 카테고리별 제품 */}
+          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            {Object.entries(groupedProducts).map(([category, products]) => (
+              <div key={category} style={{ marginBottom: '32px' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '16px',
+                }}>
+                  <span style={{
+                    background: CATEGORY_COLORS[category].badge,
+                    color: 'white',
+                    padding: '6px 16px',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                  }}>
+                    {category}
+                  </span>
+                  <div style={{ flex: 1, height: '2px', background: CATEGORY_COLORS[category].border, opacity: 0.3 }} />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 440px))', gap: '20px', justifyContent: 'center' }}>
+                  {products.map(product => {
+                    const productOrders = Object.values(orders).filter(o => o.sku === product.sku);
+                    const totalQty = productOrders.reduce((sum, o) => sum + o.qty, 0);
+                    const hasImage = !!images[product.sku];
+                    
+                    return (
+                      <div
+                        key={product.sku}
+                        className="product-card"
+                        style={{
+                          background: CATEGORY_COLORS[category].bg,
+                          border: `2px solid ${CATEGORY_COLORS[category].border}`,
+                          borderRadius: '16px',
+                          padding: '20px',
+                          position: 'relative',
+                        }}
+                      >
+                        {totalQty > 0 && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '-10px',
+                            right: '-10px',
+                            background: '#E74C3C',
+                            color: 'white',
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: '700',
+                            fontSize: '14px',
+                            boxShadow: '0 2px 8px rgba(231,76,60,0.4)',
+                            zIndex: 10,
+                          }}>
+                            {totalQty}
+                          </div>
+                        )}
+
+                        <div 
+                          className={`image-upload-zone ${hasImage ? 'has-image' : ''}`}
+                          onClick={() => !hasImage && fileInputRefs.current[product.sku]?.click()}
+                          style={{ position: 'relative' }}
+                        >
+                          <input
+                            type="file"
+                            accept="image/*"
+                            ref={el => fileInputRefs.current[product.sku] = el}
+                            onChange={(e) => handleImageUpload(product.sku, e)}
+                            style={{ display: 'none' }}
+                          />
+                          {hasImage ? (
+                            <>
+                              <img 
+                                src={images[product.sku]} 
+                                alt={product.name}
+                                className="product-image"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setImageViewModal(images[product.sku]);
+                                }}
+                              />
+                              <button 
+                                className="remove-image-btn no-print"
+                                onClick={(e) => removeImage(product.sku, e)}
+                                title="이미지 삭제"
+                              >
+                                ✕
+                              </button>
+                            </>
+                          ) : (
+                            <div className="no-print" style={{ padding: '8px 0' }}>
+                              <div style={{ fontSize: '24px', marginBottom: '4px' }}>📷</div>
+                              <div style={{ fontSize: '12px', color: '#888' }}>클릭하여 제품 사진 추가</div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ marginBottom: '12px' }}>
+                          <div style={{ fontSize: '13px', color: '#888', marginBottom: '4px', fontFamily: 'monospace' }}>
+                            {product.sku}
+                          </div>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a' }}>
+                            {product.name}
+                          </div>
+                          <div style={{
+                            display: 'inline-block',
+                            marginTop: '6px',
+                            padding: '4px 10px',
+                            background: product.color === 'Chestnut' ? '#D4A574' : 
+                                       product.color === 'Grey' ? '#9E9E9E' : '#333',
+                            color: 'white',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                          }}>
+                            {product.color}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                          {product.sizes.map(size => {
+                            const selected = isSelected(product.sku, size);
+                            const krSize = US_TO_KR[size];
+                            return (
+                              <div key={size} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                <div
+                                  className={`size-btn ${selected ? 'selected' : ''}`}
+                                  onClick={() => toggleSize(product.sku, size)}
+                                  style={{
+                                    width: '60px',
+                                    height: '52px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: 'white',
+                                    border: `2px solid ${CATEGORY_COLORS[category].border}`,
+                                    borderRadius: '10px',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    lineHeight: '1.2',
+                                  }}
+                                >
+                                  <span style={{ fontSize: '11px', opacity: 0.7 }}>US {size}</span>
+                                  <span style={{ fontSize: '15px' }}>{krSize}</span>
+                                </div>
+                                {selected && (
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    className="qty-input"
+                                    value={getQty(product.sku, size)}
+                                    onChange={(e) => updateQty(product.sku, size, e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 주문 요약 */}
+          {getTotalItems() > 0 && (
+            <div style={{
+              maxWidth: '1200px',
+              margin: '32px auto 0',
+              background: 'white',
+              borderRadius: '16px',
+              padding: '24px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              border: '2px solid #1a1a1a',
+            }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#1a1a1a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>📦 주문 요약 <span style={{ color: '#E74C3C' }}>({getTotalItems()}개)</span></span>
+                <button 
+                  className="btn-primary no-print"
+                  onClick={() => downloadXLSX(orders, clientName, clientContact, orderDate, notes, senderAddress, receiverAddress)}
+                  style={{ fontSize: '14px', padding: '10px 20px' }}
+                >
+                  📥 엑셀 다운로드
+                </button>
+              </h2>
+              
+              <div style={{ marginBottom: '16px', padding: '12px', background: '#f8f8f8', borderRadius: '8px' }}>
+                <div style={{ marginBottom: '8px' }}>
+                  <strong>거래처:</strong> {clientName || '-'} | <strong>연락처:</strong> {clientContact || '-'} | <strong>주문일:</strong> {orderDate}
+                  {notes && <> | <strong>비고:</strong> {notes}</>}
+                </div>
+                {(senderAddress || receiverAddress) && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #ddd' }}>
+                    <div>
+                      <strong>📤 발송지:</strong> <span style={{ color: '#555' }}>{senderAddress || '-'}</span>
+                    </div>
+                    <div>
+                      <strong>📥 도착지:</strong> <span style={{ color: '#555' }}>{receiverAddress || '-'}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #1a1a1a' }}>
+                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px', width: '60px' }}>사진</th>
+                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>품번</th>
+                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>제품명</th>
+                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>컬러</th>
+                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>사이즈(mm) × 수량</th>
+                    <th style={{ textAlign: 'right', padding: '12px 8px', fontSize: '14px' }}>소계</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(getOrderSummary()).map(([sku, items]) => {
+                    const product = UGG_PRODUCTS.find(p => p.sku === sku);
+                    const subtotal = items.reduce((sum, i) => sum + i.qty, 0);
+                    return (
+                      <tr key={sku} style={{ borderBottom: '1px solid #eee' }}>
+                        <td style={{ padding: '8px' }}>
+                          {images[sku] ? (
+                            <img 
+                              src={images[sku]} 
+                              alt={product?.name}
+                              style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '6px' }}
+                            />
+                          ) : (
+                            <div style={{ 
+                              width: '50px', 
+                              height: '50px', 
+                              background: '#f0f0f0', 
+                              borderRadius: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '20px',
+                              color: '#ccc'
+                            }}>
+                              📷
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontSize: '13px' }}>{sku}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: '600' }}>{product?.name}</td>
+                        <td style={{ padding: '12px 8px' }}>{product?.color}</td>
+                        <td style={{ padding: '12px 8px' }}>
+                          {items.map(i => `${US_TO_KR[i.size]}(${i.qty})`).join(', ')}
+                        </td>
+                        <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '700' }}>{subtotal}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{ borderTop: '2px solid #1a1a1a', background: '#f8f8f8' }}>
+                    <td colSpan={5} style={{ padding: '12px 8px', fontWeight: '700', fontSize: '16px' }}>총 주문 수량</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '800', fontSize: '18px', color: '#E74C3C' }}>
+                      {getTotalItems()}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
+          {/* URL 공유 모달 */}
+          {showShareModal && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }} onClick={() => setShowShareModal(false)}>
+              <div style={{
+                background: 'white',
+                borderRadius: '20px',
+                padding: '32px',
+                maxWidth: '500px',
+                width: '90%',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              }} onClick={(e) => e.stopPropagation()}>
+                <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px' }}>
+                  🔗 주문서 공유 링크
+                </h3>
+                <p style={{ color: '#666', marginBottom: '16px', fontSize: '14px' }}>
+                  아래 URL을 거래처에 공유하면 동일한 주문서(이미지 포함)를 확인할 수 있습니다.
+                </p>
+                <div style={{
+                  background: '#f5f5f5',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  wordBreak: 'break-all',
+                  fontSize: '12px',
+                  fontFamily: 'monospace',
+                  marginBottom: '16px',
+                  maxHeight: '100px',
+                  overflow: 'auto',
+                }}>
+                  {shareUrl}
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button className="btn-primary" onClick={copyToClipboard} style={{ flex: 1 }}>
+                    {copied ? '✅ 복사됨!' : '📋 복사하기'}
+                  </button>
+                  <button className="btn-secondary" onClick={() => setShowShareModal(false)}>
+                    닫기
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 이미지 확대 모달 */}
+          {imageViewModal && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.85)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1001,
+              cursor: 'pointer',
+            }} onClick={() => setImageViewModal(null)}>
+              <img 
+                src={imageViewModal} 
+                alt="확대 이미지"
+                style={{
+                  maxWidth: '90%',
+                  maxHeight: '90%',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                }}
+              />
+              <button style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'rgba(255,255,255,0.2)',
+                color: 'white',
+                border: 'none',
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                fontSize: '24px',
+                cursor: 'pointer',
+              }}>
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* 히스토리 모달 */}
+          {showHistoryModal && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }} onClick={() => setShowHistoryModal(false)}>
+              <div style={{
+                background: 'white',
+                borderRadius: '20px',
+                padding: '32px',
+                maxWidth: '600px',
+                width: '90%',
+                maxHeight: '80vh',
+                overflow: 'hidden',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              }} onClick={(e) => e.stopPropagation()}>
+                <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>📋 주문 히스토리</span>
+                  <button 
+                    onClick={() => setShowHistoryModal(false)}
+                    style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#999' }}
+                  >
+                    ✕
+                  </button>
+                </h3>
+                
+                <div style={{ maxHeight: 'calc(80vh - 120px)', overflowY: 'auto' }}>
+                  {orderHistory.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '12px' }}>📭</div>
+                      <div>저장된 주문이 없습니다.</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {orderHistory.map((item, idx) => (
+                        <div 
+                          key={item.id}
+                          onClick={() => loadFromHistory(item)}
+                          style={{
+                            padding: '16px',
+                            background: '#f8f8f8',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            border: '2px solid transparent',
+                            position: 'relative',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.borderColor = '#D4A574'}
+                          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '6px' }}>
+                                {item.clientName || '(거래처명 없음)'}
+                              </div>
+                              <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>
+                                📅 주문일: {item.orderDate} | 📦 수량: {item.totalItems}개
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#999' }}>
+                                💾 저장: {new Date(item.savedAt).toLocaleString('ko-KR')}
+                              </div>
+                              {item.receiverAddress && (
+                                <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+                                  📥 {item.receiverAddress.substring(0, 30)}...
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={(e) => deleteFromHistory(item.id, e)}
+                              style={{
+                                background: '#ff4444',
+                                color: 'white',
+                                border: 'none',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                              }}
+                              title="삭제"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.render(<UGGOrderForm />, document.getElementById('root'));
+  </script>
+</body>
+</html>
