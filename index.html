@@ -305,18 +305,21 @@
       // Title
       data.push(['UGG ORDER FORM']);
       data.push([]);
+      data.push([]); // 빈 행 추가
       
       // Client Information Section
       data.push(['CLIENT INFORMATION']);
       data.push(['Client Name', clientName || '-', '', 'Contact', clientContact || '-']);
       data.push(['Order Date', orderDate, '', 'Notes', notes || '-']);
       data.push([]);
+      data.push([]); // 빈 행 추가
       
       // Shipping Information Section
       data.push(['SHIPPING INFORMATION']);
       data.push(['Sender Address', senderAddress || '-']);
       data.push(['Receiver Address', receiverAddress || '-']);
       data.push([]);
+      data.push([]); // 빈 행 추가
       
       // Order Details Section
       data.push(['ORDER DETAILS']);
@@ -342,6 +345,7 @@
       data.push([]);
       data.push(['', '', '', '', '', 'TOTAL QUANTITY', totalItems]);
       data.push([]);
+      data.push([]); // 빈 행 추가
       
       // Product Summary Section
       data.push(['PRODUCT SUMMARY']);
@@ -362,6 +366,8 @@
       
       data.push([]);
       data.push(['', '', '', 'GRAND TOTAL', totalItems]);
+      data.push([]);
+      data.push([]); // 빈 행 추가
 
       const ws = XLSX.utils.aoa_to_sheet(data);
       
@@ -378,13 +384,13 @@
       
       // Calculate dynamic row positions
       const titleRow = 0;
-      const clientInfoHeaderRow = 2;
-      const clientInfoRows = [3, 4];
-      const shippingInfoHeaderRow = 6;
-      const shippingInfoRows = [7, 8];
-      const orderDetailHeaderRow = 10;
-      const orderDetailColumnHeaderRow = 11;
-      const orderDetailStartRow = 12;
+      const clientInfoHeaderRow = 3;
+      const clientInfoRows = [4, 5];
+      const shippingInfoHeaderRow = 8;
+      const shippingInfoRows = [9, 10];
+      const orderDetailHeaderRow = 13;
+      const orderDetailColumnHeaderRow = 14;
+      const orderDetailStartRow = 15;
       const orderDetailEndRow = orderDetailStartRow + Object.values(orderSummary).flat().length - 1;
       const orderTotalRow = orderDetailEndRow + 2;
       const summaryHeaderRow = orderTotalRow + 2;
@@ -403,8 +409,8 @@
         { s: { r: orderDetailHeaderRow, c: 0 }, e: { r: orderDetailHeaderRow, c: 6 } },
         { s: { r: summaryHeaderRow, c: 0 }, e: { r: summaryHeaderRow, c: 6 } },
         // Shipping info values
-        { s: { r: 7, c: 1 }, e: { r: 7, c: 6 } },
-        { s: { r: 8, c: 1 }, e: { r: 8, c: 6 } },
+        { s: { r: 9, c: 1 }, e: { r: 9, c: 6 } },
+        { s: { r: 10, c: 1 }, e: { r: 10, c: 6 } },
       ];
       
       // Enhanced Styling
@@ -542,6 +548,10 @@
       const [showHistoryModal, setShowHistoryModal] = useState(false);
       const [selectedCategory, setSelectedCategory] = useState('ALL');
       const [showAllInOne, setShowAllInOne] = useState(false);
+      
+      // 거래처 정보 저장 기능
+      const [clientList, setClientList] = useState([]);
+      const [showClientModal, setShowClientModal] = useState(false);
 
       const t = TRANSLATIONS[language];
 
@@ -635,10 +645,99 @@
           }
         }
       };
+      
+      // 거래처 목록 로드
+      const loadClientList = () => {
+        try {
+          const stored = localStorage.getItem('ugg-client-list');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            parsed.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+            setClientList(parsed);
+          }
+        } catch (e) {
+          console.error('Failed to load client list:', e);
+          setClientList([]);
+        }
+      };
+      
+      // 거래처 정보 저장
+      const saveClient = () => {
+        if (!clientName.trim()) {
+          alert('거래처명을 입력해주세요.');
+          return;
+        }
+        
+        const clientData = {
+          id: Date.now(),
+          clientName,
+          clientContact,
+          senderAddress,
+          receiverAddress,
+          notes,
+          savedAt: new Date().toISOString(),
+        };
+        
+        try {
+          const stored = localStorage.getItem('ugg-client-list');
+          const list = stored ? JSON.parse(stored) : [];
+          
+          // 동일 거래처명 확인
+          const existing = list.find(c => c.clientName === clientName);
+          if (existing) {
+            if (!confirm('동일한 거래처명이 이미 존재합니다. 덮어쓰시겠습니까?')) {
+              return;
+            }
+            // 기존 항목 제거
+            const filtered = list.filter(c => c.clientName !== clientName);
+            filtered.unshift(clientData);
+            localStorage.setItem('ugg-client-list', JSON.stringify(filtered));
+          } else {
+            list.unshift(clientData);
+            // 최대 30개 유지
+            if (list.length > 30) list.pop();
+            localStorage.setItem('ugg-client-list', JSON.stringify(list));
+          }
+          
+          alert('거래처 정보가 저장되었습니다.');
+          loadClientList();
+        } catch (e) {
+          console.error('Failed to save client:', e);
+          alert('저장에 실패했습니다.');
+        }
+      };
+      
+      // 거래처 정보 불러오기
+      const loadClient = (client) => {
+        setClientName(client.clientName || '');
+        setClientContact(client.clientContact || '');
+        setSenderAddress(client.senderAddress || '');
+        setReceiverAddress(client.receiverAddress || '');
+        setNotes(client.notes || '');
+        setShowClientModal(false);
+        alert('거래처 정보가 불러와졌습니다.');
+      };
+      
+      // 거래처 삭제
+      const deleteClient = (id, e) => {
+        e.stopPropagation();
+        if (confirm('이 거래처를 삭제하시겠습니까?')) {
+          try {
+            const stored = localStorage.getItem('ugg-client-list');
+            const list = stored ? JSON.parse(stored) : [];
+            const filtered = list.filter(item => item.id !== id);
+            localStorage.setItem('ugg-client-list', JSON.stringify(filtered));
+            loadClientList();
+          } catch (e) {
+            console.error('Failed to delete client:', e);
+          }
+        }
+      };
 
       // URL에서 데이터 로드
       useEffect(() => {
         loadHistory();
+        loadClientList();
         
         const params = new URLSearchParams(window.location.search);
         const data = params.get('data');
@@ -1041,6 +1140,24 @@
                   />
                 </div>
               </div>
+            </div>
+            
+            {/* 거래처 저장/불러오기 버튼 */}
+            <div style={{ marginTop: '16px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                className="btn-secondary"
+                onClick={saveClient}
+                style={{ fontSize: '14px', padding: '10px 20px' }}
+              >
+                💾 거래처 저장
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => setShowClientModal(true)}
+                style={{ fontSize: '14px', padding: '10px 20px' }}
+              >
+                📂 거래처 불러오기 ({clientList.length})
+              </button>
             </div>
           </div>
 
@@ -1508,6 +1625,110 @@
             </div>
           )}
 
+          {/* 거래처 목록 모달 */}
+          {showClientModal && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }} onClick={() => setShowClientModal(false)}>
+              <div style={{
+                background: 'white',
+                borderRadius: '20px',
+                padding: '32px',
+                maxWidth: '600px',
+                width: '90%',
+                maxHeight: '80vh',
+                overflow: 'hidden',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              }} onClick={(e) => e.stopPropagation()}>
+                <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>📂 거래처 목록</span>
+                  <button 
+                    onClick={() => setShowClientModal(false)}
+                    style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#999' }}
+                  >
+                    ✕
+                  </button>
+                </h3>
+                
+                <div style={{ maxHeight: 'calc(80vh - 120px)', overflowY: 'auto' }}>
+                  {clientList.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '12px' }}>💭</div>
+                      <div>저장된 거래처가 없습니다.</div>
+                      <div style={{ fontSize: '13px', marginTop: '8px' }}>거래처 정보를 입력하고 '거래처 저장' 버튼을 누르세요.</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {clientList.map((client) => (
+                        <div 
+                          key={client.id}
+                          onClick={() => loadClient(client)}
+                          style={{
+                            padding: '16px',
+                            background: '#f8f8f8',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            border: '2px solid transparent',
+                            position: 'relative',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.borderColor = '#D4A574'}
+                          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '6px' }}>
+                                {client.clientName}
+                              </div>
+                              {client.clientContact && (
+                                <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>
+                                  📞 {client.clientContact}
+                                </div>
+                              )}
+                              {client.receiverAddress && (
+                                <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+                                  📥 {client.receiverAddress.substring(0, 30)}{client.receiverAddress.length > 30 ? '...' : ''}
+                                </div>
+                              )}
+                              <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
+                                💾 저장: {new Date(client.savedAt).toLocaleString('ko-KR')}
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => deleteClient(client.id, e)}
+                              style={{
+                                background: '#ff4444',
+                                color: 'white',
+                                border: 'none',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                              }}
+                              title="삭제"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* 히스토리 모달 */}
           {showHistoryModal && (
             <div style={{
