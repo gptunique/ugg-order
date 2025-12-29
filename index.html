@@ -157,6 +157,112 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
+    // 다국어 번역 데이터
+    const TRANSLATIONS = {
+      ko: {
+        title: '🥾 UGG 주문서',
+        subtitle: '제품을 클릭하여 주문 수량을 선택하세요',
+        imageUpload: '이미지 첨부 가능',
+        reset: '초기화',
+        history: '히스토리',
+        save: '저장',
+        print: '인쇄',
+        excel: '엑셀',
+        share: 'URL 공유',
+        clientInfo: '거래처 정보',
+        clientName: '거래처명',
+        contact: '연락처',
+        orderDate: '주문일',
+        notes: '비고',
+        shipping: '배송 정보',
+        sender: '발송지 주소',
+        receiver: '도착지 주소',
+        orderSummary: '주문 요약',
+        photo: '사진',
+        sku: '품번',
+        productName: '제품명',
+        color: '컴러',
+        sizeQty: '사이즈(mm) × 수량',
+        subtotal: '소계',
+        delete: '삭제',
+        totalQty: '총 주문 수량',
+        clickToAddPhoto: '클릭하여 제품 사진 추가',
+        enterClientName: '거래처명 입력',
+        enterContact: '연락처 입력',
+        enterNotes: '메모 입력',
+        enterSender: '발송지 주소 입력',
+        enterReceiver: '도착지 주소 입력',
+      },
+      en: {
+        title: '🥾 UGG Order Form',
+        subtitle: 'Click on products to select order quantity',
+        imageUpload: 'Image upload available',
+        reset: 'Reset',
+        history: 'History',
+        save: 'Save',
+        print: 'Print',
+        excel: 'Excel',
+        share: 'Share URL',
+        clientInfo: 'Client Information',
+        clientName: 'Client Name',
+        contact: 'Contact',
+        orderDate: 'Order Date',
+        notes: 'Notes',
+        shipping: 'Shipping Information',
+        sender: 'Sender Address',
+        receiver: 'Receiver Address',
+        orderSummary: 'Order Summary',
+        photo: 'Photo',
+        sku: 'SKU',
+        productName: 'Product Name',
+        color: 'Color',
+        sizeQty: 'Size(mm) × Qty',
+        subtotal: 'Subtotal',
+        delete: 'Delete',
+        totalQty: 'Total Quantity',
+        clickToAddPhoto: 'Click to add product photo',
+        enterClientName: 'Enter client name',
+        enterContact: 'Enter contact',
+        enterNotes: 'Enter notes',
+        enterSender: 'Enter sender address',
+        enterReceiver: 'Enter receiver address',
+      },
+      cn: {
+        title: '🥾 UGG 订单',
+        subtitle: '点击产品选择订单数量',
+        imageUpload: '可上传图片',
+        reset: '重置',
+        history: '历史记录',
+        save: '保存',
+        print: '打印',
+        excel: 'Excel',
+        share: '分享URL',
+        clientInfo: '客户信息',
+        clientName: '客户名称',
+        contact: '联系方式',
+        orderDate: '订单日期',
+        notes: '备注',
+        shipping: '配送信息',
+        sender: '发件人地址',
+        receiver: '收件人地址',
+        orderSummary: '订单概要',
+        photo: '照片',
+        sku: '产品编号',
+        productName: '产品名称',
+        color: '颜色',
+        sizeQty: '尺码(mm) × 数量',
+        subtotal: '小计',
+        delete: '删除',
+        totalQty: '总数量',
+        clickToAddPhoto: '点击添加产品照片',
+        enterClientName: '输入客户名称',
+        enterContact: '输入联系方式',
+        enterNotes: '输入备注',
+        enterSender: '输入发件人地址',
+        enterReceiver: '输入收件人地址',
+      }
+    };
+
     // US 사이즈 → 한국 사이즈 매핑
     const US_TO_KR = {
       5: 220, 6: 230, 7: 240, 8: 250, 9: 260, 10: 270, 11: 280, 12: 290
@@ -266,6 +372,7 @@
     };
 
     function UGGOrderForm() {
+      const [language, setLanguage] = useState('ko');
       const [orders, setOrders] = useState({});
       const [images, setImages] = useState({});
       const [clientName, setClientName] = useState('');
@@ -282,6 +389,8 @@
       
       const [orderHistory, setOrderHistory] = useState([]);
       const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+      const t = TRANSLATIONS[language];
 
       // localStorage 히스토리 로드
       const loadHistory = () => {
@@ -550,26 +659,75 @@
             gap: '16px',
           }}>
             <div>
-              <h1 style={{
-                fontSize: '28px',
-                fontWeight: '800',
-                color: '#1a1a1a',
-                margin: 0,
-                letterSpacing: '-0.5px',
-              }}>
-                🥾 UGG 주문서
-              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <h1 style={{
+                  fontSize: '28px',
+                  fontWeight: '800',
+                  color: '#1a1a1a',
+                  margin: 0,
+                  letterSpacing: '-0.5px',
+                }}>
+                  {t.title}
+                </h1>
+                <div className="no-print" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <button 
+                    onClick={() => setLanguage('ko')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      color: language === 'ko' ? '#E74C3C' : '#999',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    KO
+                  </button>
+                  <button 
+                    onClick={() => setLanguage('en')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      color: language === 'en' ? '#E74C3C' : '#999',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    ENG
+                  </button>
+                  <button 
+                    onClick={() => setLanguage('cn')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      color: language === 'cn' ? '#E74C3C' : '#999',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    CN
+                  </button>
+                </div>
+              </div>
               <p style={{ color: '#666', margin: '4px 0 0', fontSize: '14px' }}>
-                제품을 클릭하여 주문 수량을 선택하세요 · 📷 이미지 첨부 가능
+                {t.subtitle} · 📷 {t.imageUpload}
               </p>
             </div>
             
             <div className="no-print" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <button className="btn-secondary" onClick={clearAll}>
-                🗑️ 초기화
+                🗑️ {t.reset}
               </button>
               <button className="btn-secondary" onClick={() => { loadHistory(); setShowHistoryModal(true); }}>
-                📋 히스토리 ({orderHistory.length})
+                📋 {t.history} ({orderHistory.length})
               </button>
               <button 
                 className="btn-secondary" 
@@ -577,10 +735,10 @@
                 disabled={getTotalItems() === 0}
                 style={{ opacity: getTotalItems() === 0 ? 0.5 : 1 }}
               >
-                💾 저장
+                💾 {t.save}
               </button>
               <button className="btn-secondary" onClick={printOrder}>
-                🖨️ 인쇄
+                🖨️ {t.print}
               </button>
               <button 
                 className="btn-secondary" 
@@ -588,10 +746,10 @@
                 disabled={getTotalItems() === 0}
                 style={{ opacity: getTotalItems() === 0 ? 0.5 : 1 }}
               >
-                📥 엑셀
+                📥 {t.excel}
               </button>
               <button className="btn-primary" onClick={generateShareUrl}>
-                🔗 URL 공유
+                🔗 {t.share}
               </button>
             </div>
           </div>
@@ -606,36 +764,36 @@
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
           }}>
             <h2 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: '#333' }}>
-              📋 거래처 정보
+              📋 {t.clientInfo}
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
-                  거래처명
+                  {t.clientName}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
-                  placeholder="거래처명 입력"
+                  placeholder={t.enterClientName}
                 />
               </div>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
-                  연락처
+                  {t.contact}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={clientContact}
                   onChange={(e) => setClientContact(e.target.value)}
-                  placeholder="연락처 입력"
+                  placeholder={t.enterContact}
                 />
               </div>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
-                  주문일
+                  {t.orderDate}
                 </label>
                 <input
                   type="date"
@@ -646,45 +804,45 @@
               </div>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
-                  비고
+                  {t.notes}
                 </label>
                 <input
                   type="text"
                   className="input-field"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="메모 입력"
+                  placeholder={t.enterNotes}
                 />
               </div>
             </div>
             
             <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
               <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: '#333' }}>
-                🚚 배송 정보
+                🚚 {t.shipping}
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
-                    📤 발송지 주소
+                    📤 {t.sender}
                   </label>
                   <textarea
                     className="input-field"
                     value={senderAddress}
                     onChange={(e) => setSenderAddress(e.target.value)}
-                    placeholder="발송지 주소 입력"
+                    placeholder={t.enterSender}
                     rows={2}
                     style={{ resize: 'vertical', minHeight: '60px' }}
                   />
                 </div>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
-                    📥 도착지 주소
+                    📥 {t.receiver}
                   </label>
                   <textarea
                     className="input-field"
                     value={receiverAddress}
                     onChange={(e) => setReceiverAddress(e.target.value)}
-                    placeholder="도착지 주소 입력"
+                    placeholder={t.enterReceiver}
                     rows={2}
                     style={{ resize: 'vertical', minHeight: '60px' }}
                   />
@@ -790,7 +948,7 @@
                           ) : (
                             <div className="no-print" style={{ padding: '8px 0' }}>
                               <div style={{ fontSize: '24px', marginBottom: '4px' }}>📷</div>
-                              <div style={{ fontSize: '12px', color: '#888' }}>클릭하여 제품 사진 추가</div>
+                              <div style={{ fontSize: '12px', color: '#888' }}>{t.clickToAddPhoto}</div>
                             </div>
                           )}
                         </div>
@@ -878,37 +1036,37 @@
               border: '2px solid #1a1a1a',
             }}>
               <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#1a1a1a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>📦 주문 요약 <span style={{ color: '#E74C3C' }}>({getTotalItems()}개)</span></span>
+                <span>📦 {t.orderSummary} <span style={{ color: '#E74C3C' }}>({getTotalItems()}개)</span></span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button 
                     className="btn-secondary no-print"
                     onClick={saveToHistory}
                     style={{ fontSize: '14px', padding: '10px 20px' }}
                   >
-                    💾 저장
+                    💾 {t.save}
                   </button>
                   <button 
                     className="btn-primary no-print"
                     onClick={() => downloadXLSX(orders, clientName, clientContact, orderDate, notes, senderAddress, receiverAddress)}
                     style={{ fontSize: '14px', padding: '10px 20px' }}
                   >
-                    📥 엑셀 다운로드
+                    📥 {t.excel}
                   </button>
                 </div>
               </h2>
               
               <div style={{ marginBottom: '16px', padding: '12px', background: '#f8f8f8', borderRadius: '8px' }}>
                 <div style={{ marginBottom: '8px' }}>
-                  <strong>거래처:</strong> {clientName || '-'} | <strong>연락처:</strong> {clientContact || '-'} | <strong>주문일:</strong> {orderDate}
-                  {notes && <> | <strong>비고:</strong> {notes}</>}
+                  <strong>{t.clientName}:</strong> {clientName || '-'} | <strong>{t.contact}:</strong> {clientContact || '-'} | <strong>{t.orderDate}:</strong> {orderDate}
+                  {notes && <> | <strong>{t.notes}:</strong> {notes}</>}
                 </div>
                 {(senderAddress || receiverAddress) && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #ddd' }}>
                     <div>
-                      <strong>📤 발송지:</strong> <span style={{ color: '#555' }}>{senderAddress || '-'}</span>
+                      <strong>📤 {t.sender}:</strong> <span style={{ color: '#555' }}>{senderAddress || '-'}</span>
                     </div>
                     <div>
-                      <strong>📥 도착지:</strong> <span style={{ color: '#555' }}>{receiverAddress || '-'}</span>
+                      <strong>📥 {t.receiver}:</strong> <span style={{ color: '#555' }}>{receiverAddress || '-'}</span>
                     </div>
                   </div>
                 )}
@@ -917,13 +1075,13 @@
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #1a1a1a' }}>
-                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px', width: '60px' }}>사진</th>
-                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>품번</th>
-                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>제품명</th>
-                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>컴러</th>
-                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>사이즈(mm) × 수량</th>
-                    <th style={{ textAlign: 'right', padding: '12px 8px', fontSize: '14px' }}>소계</th>
-                    <th className="no-print" style={{ textAlign: 'center', padding: '12px 8px', fontSize: '14px', width: '80px' }}>삭제</th>
+                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px', width: '60px' }}>{t.photo}</th>
+                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>{t.sku}</th>
+                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>{t.productName}</th>
+                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>{t.color}</th>
+                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>{t.sizeQty}</th>
+                    <th style={{ textAlign: 'right', padding: '12px 8px', fontSize: '14px' }}>{t.subtotal}</th>
+                    <th className="no-print" style={{ textAlign: 'center', padding: '12px 8px', fontSize: '14px', width: '80px' }}>{t.delete}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -978,7 +1136,7 @@
                             onMouseOver={(e) => e.target.style.background = '#cc0000'}
                             onMouseOut={(e) => e.target.style.background = '#ff4444'}
                           >
-                            🗑️ 삭제
+                            🗑️ {t.delete}
                           </button>
                         </td>
                       </tr>
@@ -987,7 +1145,7 @@
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: '2px solid #1a1a1a', background: '#f8f8f8' }}>
-                    <td colSpan={5} style={{ padding: '12px 8px', fontWeight: '700', fontSize: '16px' }}>총 주문 수량</td>
+                    <td colSpan={5} style={{ padding: '12px 8px', fontWeight: '700', fontSize: '16px' }}>{t.totalQty}</td>
                     <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '800', fontSize: '18px', color: '#E74C3C' }}>
                       {getTotalItems()}
                     </td>
