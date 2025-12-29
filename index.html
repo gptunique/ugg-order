@@ -498,6 +498,25 @@
         return summary;
       };
 
+      const deleteOrderItem = (sku) => {
+        if (confirm('이 제품의 모든 주문을 삭제하시겠습니까?')) {
+          setOrders(prev => {
+            const newOrders = { ...prev };
+            Object.keys(newOrders).forEach(key => {
+              if (key.startsWith(sku + '-')) {
+                delete newOrders[key];
+              }
+            });
+            return newOrders;
+          });
+          setImages(prev => {
+            const newImages = { ...prev };
+            delete newImages[sku];
+            return newImages;
+          });
+        }
+      };
+
       const clearAll = () => {
         setOrders({});
         setImages({});
@@ -860,13 +879,22 @@
             }}>
               <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#1a1a1a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>📦 주문 요약 <span style={{ color: '#E74C3C' }}>({getTotalItems()}개)</span></span>
-                <button 
-                  className="btn-primary no-print"
-                  onClick={() => downloadXLSX(orders, clientName, clientContact, orderDate, notes, senderAddress, receiverAddress)}
-                  style={{ fontSize: '14px', padding: '10px 20px' }}
-                >
-                  📥 엑셀 다운로드
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    className="btn-secondary no-print"
+                    onClick={saveToHistory}
+                    style={{ fontSize: '14px', padding: '10px 20px' }}
+                  >
+                    💾 저장
+                  </button>
+                  <button 
+                    className="btn-primary no-print"
+                    onClick={() => downloadXLSX(orders, clientName, clientContact, orderDate, notes, senderAddress, receiverAddress)}
+                    style={{ fontSize: '14px', padding: '10px 20px' }}
+                  >
+                    📥 엑셀 다운로드
+                  </button>
+                </div>
               </h2>
               
               <div style={{ marginBottom: '16px', padding: '12px', background: '#f8f8f8', borderRadius: '8px' }}>
@@ -892,9 +920,10 @@
                     <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px', width: '60px' }}>사진</th>
                     <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>품번</th>
                     <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>제품명</th>
-                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>컬러</th>
+                    <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>컴러</th>
                     <th style={{ textAlign: 'left', padding: '12px 8px', fontSize: '14px' }}>사이즈(mm) × 수량</th>
                     <th style={{ textAlign: 'right', padding: '12px 8px', fontSize: '14px' }}>소계</th>
+                    <th className="no-print" style={{ textAlign: 'center', padding: '12px 8px', fontSize: '14px', width: '80px' }}>삭제</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -933,6 +962,25 @@
                           {items.map(i => `${US_TO_KR[i.size]}(${i.qty})`).join(', ')}
                         </td>
                         <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '700' }}>{subtotal}</td>
+                        <td className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
+                          <button 
+                            onClick={() => deleteOrderItem(sku)}
+                            style={{
+                              background: '#ff4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '6px 12px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => e.target.style.background = '#cc0000'}
+                            onMouseOut={(e) => e.target.style.background = '#ff4444'}
+                          >
+                            🗑️ 삭제
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
