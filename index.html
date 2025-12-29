@@ -269,15 +269,15 @@
     };
 
     const UGG_PRODUCTS = [
-      { sku: '1122550-CHE', name: 'Classic Ultra Mini', color: 'Chestnut', category: 'Classic', sizes: [5,6,7,8,9,10] },
-      { sku: '1016422-CHE', name: 'Classic Short II', color: 'Chestnut', category: 'Classic', sizes: [5,6,7,8,9,10,11] },
-      { sku: '1016501-GREY', name: 'Classic Mini II', color: 'Grey', category: 'Classic', sizes: [5,6,7,8,9,10] },
-      { sku: '1135092-CHE', name: 'Tazz', color: 'Chestnut', category: 'Platform', sizes: [5,6,7,8,9,10] },
-      { sku: '1122553-CHE', name: 'Classic Ultra Mini Platform', color: 'Chestnut', category: 'Platform', sizes: [5,6,7,8,9,10] },
-      { sku: '1119002-CHE', name: 'Neumel', color: 'Chestnut', category: 'Neumel', sizes: [7,8,9,10,11,12] },
-      { sku: '1016223-CHE', name: 'Dakota', color: 'Chestnut', category: 'Slipper', sizes: [5,6,7,8,9,10] },
-      { sku: '1016223-BLK', name: 'Dakota', color: 'Black', category: 'Slipper', sizes: [5,6,7,8,9,10] },
-      { sku: '1016223-GREY', name: 'Dakota', color: 'Grey', category: 'Slipper', sizes: [5,6,7,8,9,10] },
+      { sku: '1122550-CHE', name: 'Classic Ultra Mini', color: 'Chestnut', category: 'Classic', sizes: [5,6,7,8,9,10], imageUrl: '' },
+      { sku: '1016422-CHE', name: 'Classic Short II', color: 'Chestnut', category: 'Classic', sizes: [5,6,7,8,9,10,11], imageUrl: '' },
+      { sku: '1016501-GREY', name: 'Classic Mini II', color: 'Grey', category: 'Classic', sizes: [5,6,7,8,9,10], imageUrl: '' },
+      { sku: '1135092-CHE', name: 'Tazz', color: 'Chestnut', category: 'Platform', sizes: [5,6,7,8,9,10], imageUrl: '' },
+      { sku: '1122553-CHE', name: 'Classic Ultra Mini Platform', color: 'Chestnut', category: 'Platform', sizes: [5,6,7,8,9,10], imageUrl: '' },
+      { sku: '1119002-CHE', name: 'Neumel', color: 'Chestnut', category: 'Neumel', sizes: [7,8,9,10,11,12], imageUrl: '' },
+      { sku: '1016223-CHE', name: 'Dakota', color: 'Chestnut', category: 'Slipper', sizes: [5,6,7,8,9,10], imageUrl: '' },
+      { sku: '1016223-BLK', name: 'Dakota', color: 'Black', category: 'Slipper', sizes: [5,6,7,8,9,10], imageUrl: '' },
+      { sku: '1016223-GREY', name: 'Dakota', color: 'Grey', category: 'Slipper', sizes: [5,6,7,8,9,10], imageUrl: '' },
     ];
 
     const CATEGORY_COLORS = {
@@ -373,6 +373,7 @@
 
     function UGGOrderForm() {
       const [language, setLanguage] = useState('ko');
+      const [adminMode, setAdminMode] = useState(false);
       const [orders, setOrders] = useState({});
       const [images, setImages] = useState({});
       const [clientName, setClientName] = useState('');
@@ -391,6 +392,17 @@
       const [showHistoryModal, setShowHistoryModal] = useState(false);
 
       const t = TRANSLATIONS[language];
+
+      // 제품 이미지 초기화
+      useEffect(() => {
+        const defaultImages = {};
+        UGG_PRODUCTS.forEach(product => {
+          if (product.imageUrl) {
+            defaultImages[product.sku] = product.imageUrl;
+          }
+        });
+        setImages(prev => ({ ...defaultImages, ...prev }));
+      }, []);
 
       // localStorage 히스토리 로드
       const loadHistory = () => {
@@ -495,14 +507,15 @@
         }
       }, []);
 
-      const handleImageUpload = (sku, event) => {
+      const handleImageUpload = async (sku, event) => {
         const file = event.target.files[0];
         if (file) {
-          if (file.size > 2 * 1024 * 1024) {
-            alert('이미지 크기는 2MB 이하로 업로드해주세요.');
+          if (file.size > 5 * 1024 * 1024) {
+            alert('이미지 크기는 5MB 이하로 업로드해주세요.');
             return;
           }
           
+          // 로컬에서 미리보기
           const reader = new FileReader();
           reader.onloadend = () => {
             const img = new Image();
@@ -525,6 +538,24 @@
               
               const resizedBase64 = canvas.toDataURL('image/jpeg', 0.85);
               setImages(prev => ({ ...prev, [sku]: resizedBase64 }));
+              
+              // 관리자 모드일 때 안내 메시지
+              if (adminMode) {
+                const productInfo = UGG_PRODUCTS.find(p => p.sku === sku);
+                const message = `
+📌 관리자 모드: 이미지 업로드 방법
+
+1. 이 이미지를 다운로드하세요 (우클릭 > 다른 이름으로 저장)
+2. 터미널에서 명령어 실행:
+   manus-upload-file /path/to/image.jpg
+3. 받은 URL을 코드에 추가:
+   { sku: '${sku}', name: '${productInfo?.name}', imageUrl: 'YOUR_URL_HERE' }
+
+또는 이미지를 Google Drive/Imgur 등에 업로드하고 공개 URL을 사용하세요.
+                `;
+                console.log(message);
+                alert('이미지가 로컬에 저장되었습니다. 콘솔을 확인하여 업로드 방법을 확인하세요.');
+              }
             };
             img.src = reader.result;
           };
@@ -750,6 +781,16 @@
               </button>
               <button className="btn-primary" onClick={generateShareUrl}>
                 🔗 {t.share}
+              </button>
+              <button 
+                className={adminMode ? "btn-primary" : "btn-secondary"}
+                onClick={() => setAdminMode(!adminMode)}
+                style={{ 
+                  background: adminMode ? 'linear-gradient(135deg, #E74C3C 0%, #C0392B 100%)' : undefined,
+                  fontWeight: adminMode ? '700' : '600'
+                }}
+              >
+                {adminMode ? '🔓 관리자 모드' : '🔒 관리자'}
               </button>
             </div>
           </div>
