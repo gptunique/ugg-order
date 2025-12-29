@@ -290,7 +290,7 @@
       'Slipper': { bg: '#E6F0F5', border: '#6A9BB5', badge: '#3D6B85' },
     };
 
-    // XLSX 다운로드 함수 (UI 개선 + US+KOR 사이즈 표기)
+    // XLSX Download Function (English + Enhanced Design)
     const downloadXLSX = (orders, clientName, clientContact, orderDate, notes, senderAddress, receiverAddress) => {
       const orderSummary = {};
       Object.values(orders).forEach(item => {
@@ -302,25 +302,25 @@
       const wb = XLSX.utils.book_new();
       const data = [];
       
-      // 제목
-      data.push(['UGG 주문서']);
+      // Title
+      data.push(['UGG ORDER FORM']);
       data.push([]);
       
-      // 거래처 정보
-      data.push(['거래처 정보']);
-      data.push(['거래처명', clientName || '-', '', '연락처', clientContact || '-']);
-      data.push(['주문일', orderDate, '', '비고', notes || '-']);
+      // Client Information Section
+      data.push(['CLIENT INFORMATION']);
+      data.push(['Client Name', clientName || '-', '', 'Contact', clientContact || '-']);
+      data.push(['Order Date', orderDate, '', 'Notes', notes || '-']);
       data.push([]);
       
-      // 배송 정보
-      data.push(['배송 정보']);
-      data.push(['발송지 주소', senderAddress || '-']);
-      data.push(['도착지 주소', receiverAddress || '-']);
+      // Shipping Information Section
+      data.push(['SHIPPING INFORMATION']);
+      data.push(['Sender Address', senderAddress || '-']);
+      data.push(['Receiver Address', receiverAddress || '-']);
       data.push([]);
       
-      // 주문 상세
-      data.push(['주문 상세']);
-      data.push(['No.', '품번 (SKU)', '제품명', '카테고리', '컬러', '사이즈', '수량']);
+      // Order Details Section
+      data.push(['ORDER DETAILS']);
+      data.push(['No.', 'SKU', 'Product Name', 'Category', 'Color', 'Size', 'Qty']);
       
       let rowNum = 1;
       Object.entries(orderSummary).forEach(([sku, items]) => {
@@ -340,12 +340,12 @@
       });
       
       data.push([]);
-      data.push(['', '', '', '', '', '총 주문 수량', totalItems]);
+      data.push(['', '', '', '', '', 'TOTAL QUANTITY', totalItems]);
       data.push([]);
       
-      // 제품별 요약
-      data.push(['제품별 요약']);
-      data.push(['품번 (SKU)', '제품명', '컬러', '사이즈 × 수량', '소계']);
+      // Product Summary Section
+      data.push(['PRODUCT SUMMARY']);
+      data.push(['SKU', 'Product Name', 'Color', 'Size × Qty', 'Subtotal']);
       
       Object.entries(orderSummary).forEach(([sku, items]) => {
         const product = UGG_PRODUCTS.find(p => p.sku === sku);
@@ -361,52 +361,163 @@
       });
       
       data.push([]);
-      data.push(['', '', '', '총 합계', totalItems]);
+      data.push(['', '', '', 'GRAND TOTAL', totalItems]);
 
       const ws = XLSX.utils.aoa_to_sheet(data);
       
-      // 컬럼 너비 설정
+      // Column Width Settings
       ws['!cols'] = [
         { wch: 6 },   // No.
-        { wch: 18 },  // 품번
-        { wch: 30 },  // 제품명
-        { wch: 12 },  // 카테고리
-        { wch: 12 },  // 컬러
-        { wch: 25 },  // 사이즈
-        { wch: 10 },  // 수량
+        { wch: 18 },  // SKU
+        { wch: 32 },  // Product Name
+        { wch: 12 },  // Category
+        { wch: 12 },  // Color
+        { wch: 25 },  // Size
+        { wch: 10 },  // Qty
       ];
       
-      // 셀 병합
+      // Calculate dynamic row positions
       const titleRow = 0;
       const clientInfoHeaderRow = 2;
-      const shippingInfoHeaderRow = 7;
-      const orderDetailHeaderRow = 11;
-      const summaryHeaderRow = 11 + Object.keys(orderSummary).length + Object.values(orderSummary).flat().length + 4;
+      const clientInfoRows = [3, 4];
+      const shippingInfoHeaderRow = 6;
+      const shippingInfoRows = [7, 8];
+      const orderDetailHeaderRow = 10;
+      const orderDetailColumnHeaderRow = 11;
+      const orderDetailStartRow = 12;
+      const orderDetailEndRow = orderDetailStartRow + Object.values(orderSummary).flat().length - 1;
+      const orderTotalRow = orderDetailEndRow + 2;
+      const summaryHeaderRow = orderTotalRow + 2;
+      const summaryColumnHeaderRow = summaryHeaderRow + 1;
+      const summaryStartRow = summaryColumnHeaderRow + 1;
+      const summaryEndRow = summaryStartRow + Object.keys(orderSummary).length - 1;
+      const grandTotalRow = summaryEndRow + 2;
       
+      // Cell Merges
       ws['!merges'] = [
+        // Title
         { s: { r: titleRow, c: 0 }, e: { r: titleRow, c: 6 } },
+        // Section Headers
         { s: { r: clientInfoHeaderRow, c: 0 }, e: { r: clientInfoHeaderRow, c: 6 } },
         { s: { r: shippingInfoHeaderRow, c: 0 }, e: { r: shippingInfoHeaderRow, c: 6 } },
         { s: { r: orderDetailHeaderRow, c: 0 }, e: { r: orderDetailHeaderRow, c: 6 } },
         { s: { r: summaryHeaderRow, c: 0 }, e: { r: summaryHeaderRow, c: 6 } },
+        // Shipping info values
+        { s: { r: 7, c: 1 }, e: { r: 7, c: 6 } },
+        { s: { r: 8, c: 1 }, e: { r: 8, c: 6 } },
       ];
       
-      // 스타일 적용 (헤더 행)
-      const headerRows = [titleRow, clientInfoHeaderRow, shippingInfoHeaderRow, orderDetailHeaderRow, summaryHeaderRow];
-      headerRows.forEach(row => {
+      // Enhanced Styling
+      // Title Style (Dark Blue, Large)
+      const titleCell = XLSX.utils.encode_cell({ r: titleRow, c: 0 });
+      ws[titleCell].s = {
+        font: { bold: true, sz: 18, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "1F4E78" } },
+        alignment: { horizontal: "center", vertical: "center" }
+      };
+      
+      // Section Header Style (Blue)
+      const sectionHeaders = [clientInfoHeaderRow, shippingInfoHeaderRow, orderDetailHeaderRow, summaryHeaderRow];
+      sectionHeaders.forEach(row => {
         for (let col = 0; col <= 6; col++) {
           const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
           if (!ws[cellRef]) ws[cellRef] = { t: 's', v: '' };
           ws[cellRef].s = {
-            font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
+            font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
             fill: { fgColor: { rgb: "4472C4" } },
             alignment: { horizontal: "center", vertical: "center" }
           };
         }
       });
+      
+      // Column Header Style (Light Blue)
+      [orderDetailColumnHeaderRow, summaryColumnHeaderRow].forEach(row => {
+        for (let col = 0; col <= 6; col++) {
+          const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+          if (ws[cellRef]) {
+            ws[cellRef].s = {
+              font: { bold: true, sz: 11, color: { rgb: "000000" } },
+              fill: { fgColor: { rgb: "D9E2F3" } },
+              alignment: { horizontal: "center", vertical: "center" },
+              border: {
+                top: { style: "thin", color: { rgb: "4472C4" } },
+                bottom: { style: "thin", color: { rgb: "4472C4" } },
+                left: { style: "thin", color: { rgb: "4472C4" } },
+                right: { style: "thin", color: { rgb: "4472C4" } }
+              }
+            };
+          }
+        }
+      });
+      
+      // Info Row Labels Style (Bold)
+      [...clientInfoRows, ...shippingInfoRows].forEach(row => {
+        const labelCell = XLSX.utils.encode_cell({ r: row, c: 0 });
+        if (ws[labelCell]) {
+          ws[labelCell].s = {
+            font: { bold: true, sz: 10 },
+            fill: { fgColor: { rgb: "F2F2F2" } },
+            alignment: { horizontal: "left", vertical: "center" }
+          };
+        }
+      });
+      
+      // Total Row Style (Bold, Yellow Background)
+      [orderTotalRow, grandTotalRow].forEach(row => {
+        for (let col = 0; col <= 6; col++) {
+          const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+          if (ws[cellRef]) {
+            ws[cellRef].s = {
+              font: { bold: true, sz: 11 },
+              fill: { fgColor: { rgb: "FFF2CC" } },
+              alignment: { horizontal: col >= 5 ? "center" : "left", vertical: "center" },
+              border: {
+                top: { style: "medium", color: { rgb: "000000" } },
+                bottom: { style: "medium", color: { rgb: "000000" } }
+              }
+            };
+          }
+        }
+      });
+      
+      // Data Row Borders (Light)
+      for (let row = orderDetailStartRow; row <= orderDetailEndRow; row++) {
+        for (let col = 0; col <= 6; col++) {
+          const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+          if (ws[cellRef]) {
+            ws[cellRef].s = {
+              alignment: { horizontal: col === 0 || col >= 5 ? "center" : "left", vertical: "center" },
+              border: {
+                top: { style: "thin", color: { rgb: "D0D0D0" } },
+                bottom: { style: "thin", color: { rgb: "D0D0D0" } },
+                left: { style: "thin", color: { rgb: "D0D0D0" } },
+                right: { style: "thin", color: { rgb: "D0D0D0" } }
+              }
+            };
+          }
+        }
+      }
+      
+      // Summary Row Borders
+      for (let row = summaryStartRow; row <= summaryEndRow; row++) {
+        for (let col = 0; col <= 4; col++) {
+          const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+          if (ws[cellRef]) {
+            ws[cellRef].s = {
+              alignment: { horizontal: col === 4 ? "center" : "left", vertical: "center" },
+              border: {
+                top: { style: "thin", color: { rgb: "D0D0D0" } },
+                bottom: { style: "thin", color: { rgb: "D0D0D0" } },
+                left: { style: "thin", color: { rgb: "D0D0D0" } },
+                right: { style: "thin", color: { rgb: "D0D0D0" } }
+              }
+            };
+          }
+        }
+      }
 
-      XLSX.utils.book_append_sheet(wb, ws, '주문서');
-      const fileName = `UGG_주문서_${clientName || '거래처'}_${orderDate}.xlsx`;
+      XLSX.utils.book_append_sheet(wb, ws, 'Order Form');
+      const fileName = `UGG_Order_${clientName || 'Client'}_${orderDate}.xlsx`;
       XLSX.writeFile(wb, fileName);
     };
 
