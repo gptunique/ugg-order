@@ -429,6 +429,8 @@
       
       const [orderHistory, setOrderHistory] = useState([]);
       const [showHistoryModal, setShowHistoryModal] = useState(false);
+      const [selectedCategory, setSelectedCategory] = useState('ALL');
+      const [showAllInOne, setShowAllInOne] = useState(false);
 
       const t = TRANSLATIONS[language];
 
@@ -931,9 +933,68 @@
             </div>
           </div>
 
+          {/* 카테고리 필터 스위치 (PC만) */}
+          <div className="no-print" style={{ maxWidth: '1200px', margin: '0 auto 24px', display: 'none' }} id="category-filter">
+            <style>{`
+              @media (min-width: 768px) {
+                #category-filter { display: block !important; }
+              }
+            `}</style>
+            <div style={{ 
+              display: 'flex', 
+              gap: '12px', 
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              padding: '16px',
+              background: '#f8f9fa',
+              borderRadius: '12px',
+              border: '1px solid #e0e0e0'
+            }}>
+              <span style={{ fontWeight: '600', color: '#555', marginRight: '8px' }}>카테고리:</span>
+              {['ALL', 'Slipper', 'Platform', 'Classic'].map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '20px',
+                    border: selectedCategory === cat ? '2px solid #4472C4' : '2px solid #ddd',
+                    background: selectedCategory === cat ? '#4472C4' : 'white',
+                    color: selectedCategory === cat ? 'white' : '#555',
+                    fontWeight: selectedCategory === cat ? '700' : '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    fontSize: '14px'
+                  }}
+                >
+                  {cat === 'ALL' ? '전체' : cat}
+                </button>
+              ))}
+              <div style={{ width: '1px', height: '24px', background: '#ddd', margin: '0 8px' }} />
+              <button
+                onClick={() => setShowAllInOne(!showAllInOne)}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '20px',
+                  border: showAllInOne ? '2px solid #E74C3C' : '2px solid #ddd',
+                  background: showAllInOne ? '#E74C3C' : 'white',
+                  color: showAllInOne ? 'white' : '#555',
+                  fontWeight: showAllInOne ? '700' : '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontSize: '14px'
+                }}
+              >
+                {showAllInOne ? '한 화면 보기 ON' : '한 화면 보기 OFF'}
+              </button>
+            </div>
+          </div>
+
           {/* 카테고리별 제품 */}
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            {Object.entries(groupedProducts).map(([category, products]) => (
+          <div style={{ maxWidth: showAllInOne ? '100%' : '1200px', margin: '0 auto' }}>
+            {Object.entries(groupedProducts)
+              .filter(([category]) => selectedCategory === 'ALL' || category === selectedCategory)
+              .map(([category, products]) => (
               <div key={category} style={{ marginBottom: '32px' }}>
                 <div style={{
                   display: 'flex',
@@ -954,7 +1015,12 @@
                   <div style={{ flex: 1, height: '2px', background: CATEGORY_COLORS[category].border, opacity: 0.3 }} />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 440px))', gap: '20px', justifyContent: 'center' }}>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: showAllInOne ? 'repeat(auto-fill, minmax(280px, 1fr))' : 'repeat(auto-fill, minmax(320px, 440px))', 
+                  gap: showAllInOne ? '16px' : '20px', 
+                  justifyContent: 'center' 
+                }}>
                   {products.map(product => {
                     const productOrders = Object.values(orders).filter(o => o.sku === product.sku);
                     const totalQty = productOrders.reduce((sum, o) => sum + o.qty, 0);
