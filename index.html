@@ -269,7 +269,7 @@
       5: 220, 6: 230, 7: 240, 8: 250, 9: 260, 10: 270, 11: 280, 12: 290
     };
 
-    const UGG_PRODUCTS = [
+    let UGG_PRODUCTS = [
       { sku: '1122550-CHE', name: '디스케트 슬리퍼', color: '체스트넛', category: 'Slipper', sizes: [5,6,7,8,9,10], imageUrl: 'https://drive.google.com/thumbnail?id=1UDU_SIgfss6LZAdLUVXloLr1IbzsvKqg&sz=w1000' },
       { sku: '1135092-CHE', name: '클래식 울트라 미니 플랫폼', color: '체스트넛', category: 'Platform', sizes: [5,6,7,8,9,10], imageUrl: 'https://drive.google.com/thumbnail?id=11Grug5101dEnBH5dS6uAYNBacxsbUVgj&sz=w1000' },
       { sku: '1122553-CHE', name: '타즈 슬리퍼', color: '체스트넛', category: 'Slipper', sizes: [5,6,7,8,9,10], imageUrl: 'https://drive.google.com/thumbnail?id=1ggACezQSWGxolTQKjQhR6s0E0myfT75t&sz=w1000' },
@@ -530,6 +530,12 @@
     function UGGOrderForm() {
       const [language, setLanguage] = useState('ko');
       const [adminMode, setAdminMode] = useState(false);
+      const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+      const [showLoginModal, setShowLoginModal] = useState(false);
+      const [loginId, setLoginId] = useState('');
+      const [loginPw, setLoginPw] = useState('');
+      const [editingProduct, setEditingProduct] = useState(null);
+      const [showEditModal, setShowEditModal] = useState(false);
       const [orders, setOrders] = useState({});
       const [images, setImages] = useState({});
       const [clientName, setClientName] = useState('');
@@ -552,18 +558,40 @@
       // 거래처 정보 저장 기능
       const [clientList, setClientList] = useState([]);
       const [showClientModal, setShowClientModal] = useState(false);
+      
+      // 제품 목록 (수정 가능)
+      const [products, setProducts] = useState(UGG_PRODUCTS);
 
       const t = TRANSLATIONS[language];
 
-      // 제품 이미지 초기화
+      // 제품 목록 및 이미지 초기화
       useEffect(() => {
+        // LocalStorage에서 수정된 제품 목록 불러오기
+        const storedProducts = localStorage.getItem('ugg-products');
+        if (storedProducts) {
+          try {
+            const parsed = JSON.parse(storedProducts);
+            setProducts(parsed);
+            UGG_PRODUCTS = parsed;
+          } catch (e) {
+            console.error('Failed to load products:', e);
+          }
+        }
+        
         const defaultImages = {};
-        UGG_PRODUCTS.forEach(product => {
+        products.forEach(product => {
           if (product.imageUrl) {
             defaultImages[product.sku] = product.imageUrl;
           }
         });
         setImages(prev => ({ ...defaultImages, ...prev }));
+        
+        // 관리자 로그인 상태 확인
+        const adminLoggedIn = localStorage.getItem('ugg-admin-logged-in');
+        if (adminLoggedIn === 'true') {
+          setIsAdminLoggedIn(true);
+          setAdminMode(true);
+        }
       }, []);
 
       // localStorage 히스토리 로드
@@ -732,6 +760,54 @@
             console.error('Failed to delete client:', e);
           }
         }
+      };
+      
+      // 관리자 로그인
+      const handleAdminLogin = () => {
+        if (loginId === 'admin' && loginPw === '4321') {
+          setIsAdminLoggedIn(true);
+          setAdminMode(true);
+          localStorage.setItem('ugg-admin-logged-in', 'true');
+          setShowLoginModal(false);
+          setLoginId('');
+          setLoginPw('');
+          alert('관리자 로그인 성공!');
+        } else {
+          alert('아이디 또는 비밀번호가 잘못되었습니다.');
+        }
+      };
+      
+      // 관리자 로그아웃
+      const handleAdminLogout = () => {
+        setIsAdminLoggedIn(false);
+        setAdminMode(false);
+        localStorage.removeItem('ugg-admin-logged-in');
+        alert('로그아웃 되었습니다.');
+      };
+      
+      // 제품 정보 수정
+      const handleEditProduct = (product) => {
+        setEditingProduct({ ...product });
+        setShowEditModal(true);
+      };
+      
+      // 제품 정보 저장
+      const handleSaveProduct = () => {
+        if (!editingProduct.sku || !editingProduct.name) {
+          alert('SKU와 제품명은 필수입니다.');
+          return;
+        }
+        
+        const updatedProducts = products.map(p => 
+          p.sku === editingProduct.sku ? editingProduct : p
+        );
+        
+        setProducts(updatedProducts);
+        UGG_PRODUCTS = updatedProducts;
+        localStorage.setItem('ugg-products', JSON.stringify(updatedProducts));
+        setShowEditModal(false);
+        setEditingProduct(null);
+        alert('제품 정보가 저장되었습니다.');
       };
 
       // URL에서 데이터 로드
@@ -1033,16 +1109,25 @@
               <button className="btn-primary" onClick={generateShareUrl}>
                 🔗 {t.share}
               </button>
-              <button 
-                className={adminMode ? "btn-primary" : "btn-secondary"}
-                onClick={() => setAdminMode(!adminMode)}
-                style={{ 
-                  background: adminMode ? 'linear-gradient(135deg, #E74C3C 0%, #C0392B 100%)' : undefined,
-                  fontWeight: adminMode ? '700' : '600'
-                }}
-              >
-                {adminMode ? '🔓 관리자 모드' : '🔒 관리자'}
-              </button>
+              {isAdminLoggedIn ? (
+                <button 
+                  className="btn-primary"
+                  onClick={handleAdminLogout}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #E74C3C 0%, #C0392B 100%)',
+                    fontWeight: '700'
+                  }}
+                >
+                  🔓 관리자 로그아웃
+                </button>
+              ) : (
+                <button 
+                  className="btn-secondary"
+                  onClick={() => setShowLoginModal(true)}
+                >
+                  🔒 관리자 로그인
+                </button>
+              )}
             </div>
           </div>
 
@@ -1328,11 +1413,33 @@
                         </div>
 
                         <div style={{ marginBottom: '12px' }}>
-                          <div style={{ fontSize: '13px', color: '#888', marginBottom: '4px', fontFamily: 'monospace' }}>
-                            {product.sku}
-                          </div>
-                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a' }}>
-                            {product.name}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: '13px', color: '#888', marginBottom: '4px', fontFamily: 'monospace' }}>
+                                {product.sku}
+                              </div>
+                              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a' }}>
+                                {product.name}
+                              </div>
+                            </div>
+                            {isAdminLoggedIn && (
+                              <button
+                                onClick={() => handleEditProduct(product)}
+                                style={{
+                                  background: '#3498db',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  fontWeight: '600',
+                                }}
+                                className="no-print"
+                              >
+                                ✏️ 수정
+                              </button>
+                            )}
                           </div>
                           <div style={{
                             display: 'inline-block',
@@ -1825,6 +1932,223 @@
                       ))}
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* 관리자 로그인 모달 */}
+          {showLoginModal && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }} onClick={() => setShowLoginModal(false)}>
+              <div style={{
+                background: 'white',
+                borderRadius: '20px',
+                padding: '32px',
+                maxWidth: '400px',
+                width: '90%',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              }} onClick={(e) => e.stopPropagation()}>
+                <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>🔒 관리자 로그인</span>
+                  <button 
+                    onClick={() => setShowLoginModal(false)}
+                    style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#999' }}
+                  >
+                    ✕
+                  </button>
+                </h3>
+                
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                    아이디
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={loginId}
+                    onChange={(e) => setLoginId(e.target.value)}
+                    placeholder="아이디 입력"
+                    onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                    비밀번호
+                  </label>
+                  <input
+                    type="password"
+                    className="input-field"
+                    value={loginPw}
+                    onChange={(e) => setLoginPw(e.target.value)}
+                    placeholder="비밀번호 입력"
+                    onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
+                  />
+                </div>
+                
+                <button
+                  className="btn-primary"
+                  onClick={handleAdminLogin}
+                  style={{ width: '100%', padding: '14px' }}
+                >
+                  로그인
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* 제품 수정 모달 */}
+          {showEditModal && editingProduct && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }} onClick={() => setShowEditModal(false)}>
+              <div style={{
+                background: 'white',
+                borderRadius: '20px',
+                padding: '32px',
+                maxWidth: '600px',
+                width: '90%',
+                maxHeight: '80vh',
+                overflow: 'auto',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              }} onClick={(e) => e.stopPropagation()}>
+                <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>✏️ 제품 정보 수정</span>
+                  <button 
+                    onClick={() => setShowEditModal(false)}
+                    style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#999' }}
+                  >
+                    ✕
+                  </button>
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                      SKU (모델번호)
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={editingProduct.sku}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })}
+                      placeholder="SKU 입력"
+                      disabled
+                      style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
+                    />
+                    <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>* SKU는 수정할 수 없습니다</div>
+                  </div>
+                  
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                      제품명
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={editingProduct.name}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                      placeholder="제품명 입력"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                      커러
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={editingProduct.color}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, color: e.target.value })}
+                      placeholder="커러 입력 (예: 체스트넷, 블랙, 그레이)"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                      카테고리
+                    </label>
+                    <select
+                      className="input-field"
+                      value={editingProduct.category}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                    >
+                      <option value="Slipper">Slipper</option>
+                      <option value="Platform">Platform</option>
+                      <option value="Classic">Classic</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                      이미지 URL
+                    </label>
+                    <textarea
+                      className="input-field"
+                      value={editingProduct.imageUrl}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, imageUrl: e.target.value })}
+                      placeholder="Google Drive 이미지 URL 입력"
+                      rows={3}
+                      style={{ resize: 'vertical' }}
+                    />
+                    <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
+                      * Google Drive thumbnail API 형식: https://drive.google.com/thumbnail?id=FILE_ID&sz=w1000
+                    </div>
+                  </div>
+                  
+                  {editingProduct.imageUrl && (
+                    <div>
+                      <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                        이미지 미리보기
+                      </label>
+                      <img 
+                        src={editingProduct.imageUrl} 
+                        alt="Preview"
+                        style={{ width: '100%', maxWidth: '300px', borderRadius: '8px', border: '1px solid #ddd' }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
+                  <button
+                    className="btn-secondary"
+                    onClick={() => setShowEditModal(false)}
+                    style={{ flex: 1 }}
+                  >
+                    취소
+                  </button>
+                  <button
+                    className="btn-primary"
+                    onClick={handleSaveProduct}
+                    style={{ flex: 1 }}
+                  >
+                    저장
+                  </button>
                 </div>
               </div>
             </div>
