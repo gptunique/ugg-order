@@ -791,6 +791,39 @@
         setShowEditModal(true);
       };
       
+      // Google Drive URL 변환 함수
+      const convertGoogleDriveUrl = (url) => {
+        if (!url) return url;
+        
+        // 이미 thumbnail API 형식이면 그대로 반환
+        if (url.includes('drive.google.com/thumbnail')) {
+          return url;
+        }
+        
+        // Google Drive 공유 링크에서 FILE_ID 추출
+        // 형식 1: https://drive.google.com/file/d/FILE_ID/view
+        // 형식 2: https://drive.google.com/open?id=FILE_ID
+        let fileId = null;
+        
+        const match1 = url.match(/\/file\/d\/([^\/\?]+)/);
+        if (match1) {
+          fileId = match1[1];
+        }
+        
+        const match2 = url.match(/[?&]id=([^&]+)/);
+        if (match2) {
+          fileId = match2[1];
+        }
+        
+        // FILE_ID를 찾았으면 thumbnail API 형식으로 변환
+        if (fileId) {
+          return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+        }
+        
+        // 변환할 수 없으면 원본 URL 반환
+        return url;
+      };
+      
       // 제품 정보 저장
       const handleSaveProduct = () => {
         if (!editingProduct.sku || !editingProduct.name) {
@@ -798,8 +831,15 @@
           return;
         }
         
+        // Google Drive URL 자동 변환
+        const convertedImageUrl = convertGoogleDriveUrl(editingProduct.imageUrl);
+        const productToSave = {
+          ...editingProduct,
+          imageUrl: convertedImageUrl
+        };
+        
         const updatedProducts = products.map(p => 
-          p.sku === editingProduct.sku ? editingProduct : p
+          p.sku === editingProduct.sku ? productToSave : p
         );
         
         setProducts(updatedProducts);
@@ -807,10 +847,10 @@
         localStorage.setItem('ugg-products', JSON.stringify(updatedProducts));
         
         // 이미지 URL이 변경된 경우 images state도 업데이트
-        if (editingProduct.imageUrl) {
+        if (convertedImageUrl) {
           setImages(prev => ({
             ...prev,
-            [editingProduct.sku]: editingProduct.imageUrl
+            [editingProduct.sku]: convertedImageUrl
           }));
         }
         
@@ -2122,7 +2162,8 @@
                       style={{ resize: 'vertical' }}
                     />
                     <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
-                      * Google Drive thumbnail API 형식: https://drive.google.com/thumbnail?id=FILE_ID&sz=w1000
+                      * Google Drive 공유 링크를 붙여넣으면 자동으로 변환됩니다<br/>
+                      * 예시: https://drive.google.com/file/d/FILE_ID/view
                     </div>
                   </div>
                   
