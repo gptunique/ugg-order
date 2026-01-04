@@ -282,6 +282,7 @@
       { sku: '1116109-CHE', name: '클래식 울트라 미니 부츠', color: '체스트넛', category: 'Classic', sizes: [5,6,7,8,9,10], imageUrl: 'https://drive.google.com/thumbnail?id=1quLctoRUJO0LOrDS4zGpoeXphKVDyeCr&sz=w1000' },
       { sku: '1016222-GREY', name: '클래식 미니 II 부츠', color: '그레이', category: 'Classic', sizes: [5,6,7,8,9,10], imageUrl: 'https://drive.google.com/thumbnail?id=1g65VySinjC6WImuazL9rnt_vHOM6SrtG&sz=w1000' },
       { sku: '1016222-BLK', name: '클래식 미니 II 부츠', color: '블랙', category: 'Classic', sizes: [5,6,7,8,9,10], imageUrl: 'https://drive.google.com/thumbnail?id=1GNoNbKu_5w8-m2Ugt0KbKSgq8iiaM33R&sz=w1000' },
+      { sku: '1016222-CHE', name: '클래식 미니2 부츠', color: '체스트넷', category: 'Classic', sizes: [5,6,7,8,9,10], imageUrl: 'https://files.manuscdn.com/user_upload_by_module/session_file/310419663030715924/bcdKixBXLGyLrQpA.png' },
     ];
 
     const CATEGORY_COLORS = {
@@ -559,6 +560,17 @@
       const [clientList, setClientList] = useState([]);
       const [showClientModal, setShowClientModal] = useState(false);
       
+      // 제품 추가/삭제 기능
+      const [showAddProductModal, setShowAddProductModal] = useState(false);
+      const [newProduct, setNewProduct] = useState({
+        sku: '',
+        name: '',
+        color: '',
+        category: 'Classic',
+        sizes: [5, 6, 7, 8, 9, 10],
+        imageUrl: ''
+      });
+      
       // 제품 목록 (수정 가능)
       const [products, setProducts] = useState(UGG_PRODUCTS);
 
@@ -798,6 +810,82 @@
         setAdminMode(false);
         localStorage.removeItem('ugg-admin-logged-in');
         alert('로그아웃 되었습니다.');
+      };
+      
+      // 제품 추가
+      const handleAddProduct = () => {
+        if (!newProduct.sku || !newProduct.name) {
+          alert('SKU와 제품명은 필수입니다.');
+          return;
+        }
+        
+        // 중복 SKU 확인
+        if (products.find(p => p.sku === newProduct.sku)) {
+          alert('이미 존재하는 SKU입니다.');
+          return;
+        }
+        
+        // Google Drive URL 자동 변환
+        const convertedImageUrl = convertGoogleDriveUrl(newProduct.imageUrl);
+        const productToAdd = {
+          ...newProduct,
+          imageUrl: convertedImageUrl
+        };
+        
+        const updatedProducts = [...products, productToAdd];
+        setProducts(updatedProducts);
+        UGG_PRODUCTS = updatedProducts;
+        localStorage.setItem('ugg-products', JSON.stringify(updatedProducts));
+        
+        // 이미지 URL이 있으면 images state에도 추가
+        if (convertedImageUrl) {
+          setImages(prev => ({
+            ...prev,
+            [productToAdd.sku]: convertedImageUrl
+          }));
+        }
+        
+        setShowAddProductModal(false);
+        setNewProduct({
+          sku: '',
+          name: '',
+          color: '',
+          category: 'Classic',
+          sizes: [5, 6, 7, 8, 9, 10],
+          imageUrl: ''
+        });
+        alert('✅ 제품이 추가되었습니다!');
+      };
+      
+      // 제품 삭제
+      const handleDeleteProduct = (sku) => {
+        const product = products.find(p => p.sku === sku);
+        if (!product) return;
+        
+        if (!confirm(`"${product.name}" 제품을 삭제하시겠습니까?\n\n이 작업은 취소할 수 없습니다.`)) {
+          return;
+        }
+        
+        const updatedProducts = products.filter(p => p.sku !== sku);
+        setProducts(updatedProducts);
+        UGG_PRODUCTS = updatedProducts;
+        localStorage.setItem('ugg-products', JSON.stringify(updatedProducts));
+        
+        // images state에서도 제거
+        setImages(prev => {
+          const newImages = { ...prev };
+          delete newImages[sku];
+          return newImages;
+        });
+        
+        // 주문 내역에서도 제거
+        setOrders(prev => {
+          const newOrders = { ...prev };
+          delete newOrders[sku];
+          return newOrders;
+        });
+        
+        alert('✅ 제품이 삭제되었습니다.');
       };
       
       // 전체 저장
@@ -1196,6 +1284,16 @@
                 <>
                   <button 
                     className="btn-primary"
+                    onClick={() => setShowAddProductModal(true)}
+                    style={{ 
+                      background: 'linear-gradient(135deg, #3498DB 0%, #2980B9 100%)',
+                      fontWeight: '700'
+                    }}
+                  >
+                    ➕ 제품 추가
+                  </button>
+                  <button 
+                    className="btn-primary"
                     onClick={handleSaveAllProducts}
                     style={{ 
                       background: 'linear-gradient(135deg, #27AE60 0%, #229954 100%)',
@@ -1518,22 +1616,40 @@
                               </div>
                             </div>
                             {isAdminLoggedIn && (
-                              <button
-                                onClick={() => handleEditProduct(product)}
-                                style={{
-                                  background: '#3498db',
-                                  color: 'white',
-                                  border: 'none',
-                                  padding: '6px 12px',
-                                  borderRadius: '6px',
-                                  fontSize: '12px',
-                                  cursor: 'pointer',
-                                  fontWeight: '600',
-                                }}
-                                className="no-print"
-                              >
-                                ✏️ 수정
-                              </button>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={() => handleEditProduct(product)}
+                                  style={{
+                                    background: '#3498db',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '6px 12px',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    fontWeight: '600',
+                                  }}
+                                  className="no-print"
+                                >
+                                  ✏️ 수정
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteProduct(product.sku)}
+                                  style={{
+                                    background: '#e74c3c',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '6px 12px',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    fontWeight: '600',
+                                  }}
+                                  className="no-print"
+                                >
+                                  🗑️ 삭제
+                                </button>
+                              </div>
                             )}
                           </div>
                           <div style={{
@@ -2244,6 +2360,179 @@
                     style={{ flex: 1 }}
                   >
                     저장
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* 제품 추가 모달 */}
+          {showAddProductModal && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }}>
+              <div style={{
+                background: 'white',
+                borderRadius: '20px',
+                padding: '32px',
+                maxWidth: '500px',
+                width: '90%',
+                maxHeight: '90vh',
+                overflow: 'auto',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700' }}>➕ 제품 추가</h2>
+                  <button
+                    onClick={() => setShowAddProductModal(false)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '24px',
+                      cursor: 'pointer',
+                      color: '#999',
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                      SKU (모델번호) *
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={newProduct.sku}
+                      onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
+                      placeholder="예: 1016222-CHE"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                      제품명 *
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={newProduct.name}
+                      onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                      placeholder="제품명 입력"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                      커러
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={newProduct.color}
+                      onChange={(e) => setNewProduct({ ...newProduct, color: e.target.value })}
+                      placeholder="커러 입력 (예: 체스트넷, 블랙, 그레이)"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                      카테고리
+                    </label>
+                    <select
+                      className="input-field"
+                      value={newProduct.category}
+                      onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                    >
+                      <option value="Slipper">Slipper</option>
+                      <option value="Platform">Platform</option>
+                      <option value="Classic">Classic</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                      사이즈 범위
+                    </label>
+                    <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px' }}>
+                      쉼표로 구분하여 입력 (예: 5,6,7,8,9,10)
+                    </div>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={newProduct.sizes.join(',')}
+                      onChange={(e) => {
+                        const sizes = e.target.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                        setNewProduct({ ...newProduct, sizes });
+                      }}
+                      placeholder="5,6,7,8,9,10"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                      이미지 URL
+                    </label>
+                    <textarea
+                      className="input-field"
+                      value={newProduct.imageUrl}
+                      onChange={(e) => setNewProduct({ ...newProduct, imageUrl: e.target.value })}
+                      placeholder="Google Drive 이미지 URL 입력"
+                      rows={3}
+                      style={{ resize: 'vertical' }}
+                    />
+                    <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
+                      * Google Drive 공유 링크를 붙여넣으면 자동으로 변환됩니다<br/>
+                      * 예시: https://drive.google.com/file/d/FILE_ID/view
+                    </div>
+                  </div>
+                  
+                  {newProduct.imageUrl && (
+                    <div>
+                      <label style={{ fontSize: '13px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '6px' }}>
+                        이미지 미리보기
+                      </label>
+                      <img 
+                        src={convertGoogleDriveUrl(newProduct.imageUrl)} 
+                        alt="Preview" 
+                        style={{ 
+                          maxWidth: '100%', 
+                          maxHeight: '200px', 
+                          borderRadius: '8px',
+                          border: '1px solid #ddd'
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                  <button
+                    className="btn-secondary"
+                    onClick={() => setShowAddProductModal(false)}
+                    style={{ flex: 1 }}
+                  >
+                    취소
+                  </button>
+                  <button
+                    className="btn-primary"
+                    onClick={handleAddProduct}
+                    style={{ flex: 1 }}
+                  >
+                    추가
                   </button>
                 </div>
               </div>
