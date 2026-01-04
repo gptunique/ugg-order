@@ -805,6 +805,15 @@
         setProducts(updatedProducts);
         UGG_PRODUCTS = updatedProducts;
         localStorage.setItem('ugg-products', JSON.stringify(updatedProducts));
+        
+        // 이미지 URL이 변경된 경우 images state도 업데이트
+        if (editingProduct.imageUrl) {
+          setImages(prev => ({
+            ...prev,
+            [editingProduct.sku]: editingProduct.imageUrl
+          }));
+        }
+        
         setShowEditModal(false);
         setEditingProduct(null);
         alert('제품 정보가 저장되었습니다.');
