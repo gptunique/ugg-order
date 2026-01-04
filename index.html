@@ -578,13 +578,27 @@
           }
         }
         
+        // LocalStorage에서 저장된 이미지 불러오기
+        const storedImages = localStorage.getItem('ugg-images');
+        let savedImages = {};
+        if (storedImages) {
+          try {
+            savedImages = JSON.parse(storedImages);
+          } catch (e) {
+            console.error('Failed to load images:', e);
+          }
+        }
+        
+        // 기본 이미지 (products에서 추출)
         const defaultImages = {};
         products.forEach(product => {
           if (product.imageUrl) {
             defaultImages[product.sku] = product.imageUrl;
           }
         });
-        setImages(prev => ({ ...defaultImages, ...prev }));
+        
+        // 저장된 이미지 > 기본 이미지 순서로 병합
+        setImages({ ...defaultImages, ...savedImages });
         
         // 관리자 로그인 상태 확인
         const adminLoggedIn = localStorage.getItem('ugg-admin-logged-in');
@@ -593,6 +607,7 @@
           setAdminMode(true);
         }
       }, []);
+
 
       // localStorage 히스토리 로드
       const loadHistory = () => {
@@ -783,6 +798,25 @@
         setAdminMode(false);
         localStorage.removeItem('ugg-admin-logged-in');
         alert('로그아웃 되었습니다.');
+      };
+      
+      // 전체 저장
+      const handleSaveAllProducts = () => {
+        try {
+          // 현재 products state를 LocalStorage에 저장
+          localStorage.setItem('ugg-products', JSON.stringify(products));
+          
+          // 전역 UGG_PRODUCTS 업데이트
+          UGG_PRODUCTS = products;
+          
+          // 현재 images state도 LocalStorage에 저장
+          localStorage.setItem('ugg-images', JSON.stringify(images));
+          
+          alert('✅ 모든 제품 정보가 저장되었습니다!');
+        } catch (e) {
+          console.error('Failed to save products:', e);
+          alert('❌ 저장에 실패했습니다. 다시 시도해주세요.');
+        }
       };
       
       // 제품 정보 수정
@@ -1159,16 +1193,28 @@
                 🔗 {t.share}
               </button>
               {isAdminLoggedIn ? (
-                <button 
-                  className="btn-primary"
-                  onClick={handleAdminLogout}
-                  style={{ 
-                    background: 'linear-gradient(135deg, #E74C3C 0%, #C0392B 100%)',
-                    fontWeight: '700'
-                  }}
-                >
-                  🔓 관리자 로그아웃
-                </button>
+                <>
+                  <button 
+                    className="btn-primary"
+                    onClick={handleSaveAllProducts}
+                    style={{ 
+                      background: 'linear-gradient(135deg, #27AE60 0%, #229954 100%)',
+                      fontWeight: '700'
+                    }}
+                  >
+                    💾 전체 저장
+                  </button>
+                  <button 
+                    className="btn-primary"
+                    onClick={handleAdminLogout}
+                    style={{ 
+                      background: 'linear-gradient(135deg, #E74C3C 0%, #C0392B 100%)',
+                      fontWeight: '700'
+                    }}
+                  >
+                    🔓 관리자 로그아웃
+                  </button>
+                </>
               ) : (
                 <button 
                   className="btn-secondary"
